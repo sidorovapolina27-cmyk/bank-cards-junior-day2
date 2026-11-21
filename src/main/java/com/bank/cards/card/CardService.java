@@ -2,6 +2,7 @@ package com.bank.cards.card;
 
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -26,22 +27,55 @@ public class CardService {
     }
 
     public List<CardDto> getCardsByClient(long clientId, CardStatus status) {
-        throw new UnsupportedOperationException("Не реализовано: задание 2.3");
+        if (status == null) {
+            return cardMapper.toDtoList(
+                    cardRepository.findByClientIdOrderByIdAsc(clientId)
+            );
+        }
+        return cardMapper.toDtoList(
+                cardRepository.findByClientIdAndStatusOrderByIdAsc(clientId, status)
+        );
     }
 
     public List<CardDto> getAllCards() {
-        throw new UnsupportedOperationException("Не реализовано: задание 2.5");
+        return cardMapper.toDtoList(cardRepository.findAllByOrderByCreatedAtDescIdDesc());
     }
 
     public CardDto createCard(CreateCardRequest request) {
-        throw new UnsupportedOperationException("Не реализовано: задание 2.1");
+        Card card = Card.builder()
+                .clientId(request.getClientId())
+                .pan(request.getPan())
+                .cardHolderName(request.getCardHolderName())
+                .cardType(request.getCardType())
+                .paymentSystem(request.getPaymentSystem())
+                .validFrom(request.getValidFrom())
+                .validTo(request.getValidTo())
+                .productName(request.getProductName())
+                .status(CardStatus.NEW)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Card saved = cardRepository.save(card);
+        return cardMapper.toDto(saved);
     }
 
     public CardDto updateCard(long id, UpdateCardRequest request) {
-        throw new UnsupportedOperationException("Не реализовано: задание 2.2");
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new CardNotFoundException(id));
+
+        card.setProductName(request.getProductName());
+        card.setValidTo(request.getValidTo());
+
+        return cardMapper.toDto(card);
     }
 
     public void closeCard(long id) {
-        throw new UnsupportedOperationException("Не реализовано: задание 2.4");
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new CardNotFoundException(id));
+        if (card.getStatus() == CardStatus.CLOSED) {
+            throw new CardOperationException("Карта " + id + " уже закрыта");
+        }
+        card.setStatus(CardStatus.CLOSED);
+        cardRepository.save(card);
     }
 }
